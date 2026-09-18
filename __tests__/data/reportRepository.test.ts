@@ -38,7 +38,7 @@ describe('reportRepository', () => {
 
     const loaded = getReportById(created.id);
     expect(loaded?.customerName).toBe('Smith Residence');
-    expect(loaded?.reportNumber).toMatch(/^RPT-\d{8}-\d{3}$/);
+    expect(loaded?.reportNumber).toMatch(/^RPT-\d{6}$/);
     expect(loaded?.status).toBe('draft');
   });
 
@@ -63,6 +63,15 @@ describe('reportRepository', () => {
     const results = searchReports('warehouse');
     expect(results).toHaveLength(1);
     expect(results[0].customerName).toBe('Warehouse A');
+  });
+
+  it('assigns incrementing report numbers without collision', () => {
+    const first = createReport({ customerName: 'First' });
+    const second = createReport({ customerName: 'Second' });
+
+    const firstSeq = Number(first.reportNumber.replace('RPT-', ''));
+    const secondSeq = Number(second.reportNumber.replace('RPT-', ''));
+    expect(secondSeq).toBe(firstSeq + 1);
   });
 
   it('duplicates report metadata with new ids and draft status', () => {

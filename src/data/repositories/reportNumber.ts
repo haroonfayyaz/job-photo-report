@@ -1,25 +1,26 @@
-import {
-  buildReportNumber,
-  formatReportNumberPrefix,
-  parseReportNumberSequence,
-} from '../../domain/validation/reportNumber';
+import { buildReportNumber } from '../../domain/validation/reportNumber';
+import { METADATA_KEYS } from '../database/schema';
 import type { DatabaseConnection } from '../database/types';
 
-export function getNextReportNumber(db: DatabaseConnection): string {
-  const prefix = formatReportNumberPrefix();
+export function allocateNextReportNumber(db: DatabaseConnection): string {
   const result = db.execute(
-    `SELECT report_number FROM reports
-     WHERE report_number LIKE ?
-     ORDER BY report_number DESC
-     LIMIT 1;`,
-    [`${prefix}-%`],
+    'SELECT value FROM app_metadata WHERE key = ? LIMIT 1;',
+    [METADATA_KEYS.reportNumberCounter],
   );
 
-  const latest = result.rows[0]?.report_number;
-  if (!latest) {
-    return buildReportNumber(prefix, 1);
-  }
+  const stored = result.rows[0]?.value;
+  const current = stored ? Number.parseInt(String(stored), 10) : 0;
+  const next = Number.isNaN(current) ? 1 : current + 1;
 
-  const sequence = parseReportNumberSequence(String(latest));
-  return buildReportNumber(prefix, sequence ? sequence + 1 : 1);
+  db.execute(
+    `INSERT INTO app_metadata (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
+    [METADATA_KEYS.reportNumberCounter, String(next)],
+  );
+
+  return buildReportNumber(next);
+}
+
+export function getNextReportNumber(db: DatabaseConnection): string {
+  return db.transaction(() => allocateNextReportNumber(db));
 }

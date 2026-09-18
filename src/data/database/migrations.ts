@@ -1,3 +1,4 @@
+import { migrateToV2 } from './migrations/v2';
 import type { DatabaseConnection } from './types';
 import { METADATA_KEYS, SCHEMA_VERSION } from './schema';
 
@@ -81,6 +82,10 @@ const MIGRATIONS: Migration[] = [
       `INSERT OR IGNORE INTO business_profile (id) VALUES (1);`,
     ],
   },
+  {
+    version: 2,
+    statements: [],
+  },
 ];
 
 function getStoredVersion(db: DatabaseConnection): number {
@@ -119,13 +124,16 @@ export function runMigrations(db: DatabaseConnection): void {
     }
 
     db.transaction(() => {
+      if (migration.version === 2) {
+        migrateToV2(db);
+      }
+
       for (const statement of migration.statements) {
         db.execute(statement);
       }
       setStoredVersion(db, migration.version);
     });
   }
-
 }
 
 export function getLatestSchemaVersion(): number {

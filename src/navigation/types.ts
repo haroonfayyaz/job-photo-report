@@ -1,5 +1,7 @@
 export type RootStackParamList = {
   Reports: undefined;
-  NewReport: undefined;
+  CreateReport: undefined;
+  ReportDetail: { reportId: string };
+  EditReport: { reportId: string };
   Settings: undefined;
 };

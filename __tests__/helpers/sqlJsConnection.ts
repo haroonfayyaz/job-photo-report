@@ -65,10 +65,14 @@ function wrapDatabase(db: Database): DatabaseConnection {
   };
 }
 
-export async function createTestDatabase(): Promise<DatabaseConnection> {
+export async function createRawTestDatabase(): Promise<DatabaseConnection> {
   const SQL = await getSqlJs();
   const db = new SQL.Database();
-  const connection = wrapDatabase(db);
+  return wrapDatabase(db);
+}
+
+export async function createTestDatabase(): Promise<DatabaseConnection> {
+  const connection = await createRawTestDatabase();
   initializeDatabase(connection);
   setDatabaseForTests(connection);
   return connection;

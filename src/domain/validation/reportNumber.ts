@@ -1,26 +1,18 @@
-const REPORT_NUMBER_PATTERN = /^RPT-\d{8}-\d{3,}$/;
+export const REPORT_NUMBER_PREFIX = 'RPT';
+const REPORT_NUMBER_PATTERN = /^RPT-\d{6,}$/;
 
 export interface ReportNumberValidationResult {
   valid: boolean;
   error?: string;
 }
 
-export function formatReportNumberPrefix(date: Date = new Date()): string {
-  const isoDate = date.toISOString().slice(0, 10).replace(/-/g, '');
-  return `RPT-${isoDate}`;
-}
-
-export function buildReportNumber(
-  prefix: string,
-  sequence: number,
-  padLength = 3,
-): string {
+export function buildReportNumber(sequence: number, padLength = 6): string {
   const padded = String(sequence).padStart(padLength, '0');
-  return `${prefix}-${padded}`;
+  return `${REPORT_NUMBER_PREFIX}-${padded}`;
 }
 
 export function parseReportNumberSequence(reportNumber: string): number | null {
-  const match = reportNumber.match(/-(\d+)$/);
+  const match = reportNumber.match(/^RPT-(\d+)$/);
   if (!match) {
     return null;
   }
@@ -40,7 +32,7 @@ export function validateReportNumber(
   if (!REPORT_NUMBER_PATTERN.test(trimmed)) {
     return {
       valid: false,
-      error: 'Report number must match RPT-YYYYMMDD-### format.',
+      error: 'Report number must match RPT-###### format.',
     };
   }
 

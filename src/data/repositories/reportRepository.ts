@@ -3,6 +3,7 @@ import type { IReportRepository } from '../../domain/repositories/IReportReposit
 import type {
   CreateReportInput,
   Report,
+  ReportSummary,
   UpdateReportInput,
 } from '../../domain/models';
 import { validateCreateReportInput } from '../../domain/validation/report';
@@ -10,7 +11,7 @@ import { generateId } from '../../utils/id';
 import { getDatabase } from '../database/database';
 import { mapPhotoRow, mapReportRow, mapSectionRow } from '../database/mappers';
 import type { DatabaseConnection } from '../database/types';
-import { getNextReportNumber } from './reportNumber';
+import { allocateNextReportNumber, getNextReportNumber } from './reportNumber';
 
 function getDb(db?: DatabaseConnection): DatabaseConnection {
   return db ?? getDatabase();
@@ -96,6 +97,26 @@ export function listReports(db?: DatabaseConnection): Report[] {
     'SELECT * FROM reports ORDER BY updated_at DESC;',
   );
   return result.rows.map(mapReportRow);
+}
+
+export function listReportSummaries(
+  db?: DatabaseConnection,
+): ReportSummary[] {
+  const connection = getDb(db);
+  const result = connection.execute(
+    `SELECT
+      r.*,
+      (SELECT COUNT(*) FROM report_photos p WHERE p.report_id = r.id) AS photo_count,
+      (SELECT COUNT(*) FROM report_sections s WHERE s.report_id = r.id) AS section_count
+    FROM reports r
+    ORDER BY r.updated_at DESC;`,
+  );
+
+  return result.rows.map(row => ({
+    ...mapReportRow(row),
+    photoCount: Number(row.photo_count ?? 0),
+    sectionCount: Number(row.section_count ?? 0),
+  }));
 }
 
 export function updateReport(
@@ -201,7 +222,7 @@ export function duplicateReport(
     const duplicate: Report = {
       ...source,
       id: generateId(),
-      reportNumber: getNextReportNumber(connection),
+      reportNumber: allocateNextReportNumber(connection),
       title: source.title ? `Copy of ${source.title}` : `Copy of ${source.customerName}`,
       status: 'draft',
       createdAt: now,
