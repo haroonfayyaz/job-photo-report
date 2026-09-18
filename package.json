@@ -6,6 +6,8 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
     "start": "react-native start",
     "test": "jest",
     "typecheck": "tsc --noEmit"

@@ -1,138 +1,105 @@
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import React, {useEffect, useState} from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import {Button} from '../components/Button';
-import {FormField} from '../components/FormField';
-import {colors, spacing} from '../constants/theme';
-import type {BusinessProfile} from '../models/types';
-import type {RootStackParamList} from '../navigation/types';
-import {
-  getBusinessProfile,
-  saveBusinessProfile,
-} from '../repositories/settingsRepository';
+import { Card } from '../components/Card';
+import { IconBadge } from '../components/IconBadge';
+import { ScreenContainer } from '../components/ScreenContainer';
+import type { RootStackParamList } from '../navigation/types';
+import { colors } from '../theme/colors';
+import { radius } from '../theme/radius';
+import { spacing } from '../theme/spacing';
+import { typography } from '../theme/typography';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
-export function SettingsScreen({navigation}: Props) {
-  const [profile, setProfile] = useState<BusinessProfile>({
-    companyName: '',
-    logoPath: null,
-    phone: '',
-    email: '',
-    website: '',
-    address: '',
-    defaultTechnicianName: '',
-  });
-  const [saving, setSaving] = useState(false);
+const PROFILE_FIELDS = [
+  'Company name & logo',
+  'Phone, email & website',
+  'Business address',
+  'Default technician name',
+];
 
-  useEffect(() => {
-    setProfile(getBusinessProfile());
-  }, []);
-
-  const handleSave = () => {
-    setSaving(true);
-    try {
-      saveBusinessProfile(profile);
-      Alert.alert('Saved', 'Business profile updated.', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
-    } catch (error) {
-      console.error('Failed to save profile:', error);
-      Alert.alert('Error', 'Could not save settings. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const updateField = (field: keyof BusinessProfile, value: string) => {
-    setProfile(current => ({...current, [field]: value}));
-  };
-
+export function SettingsScreen(_props: Props) {
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled">
-        <Text style={styles.hint}>
-          This information appears on generated PDF reports. Logo upload will be
-          added in a later step.
+    <ScreenContainer scroll>
+      <Card style={styles.card}>
+        <View style={styles.header}>
+          <IconBadge symbol="🏢" variant="muted" size="md" />
+          <View style={styles.headerText}>
+            <Text style={typography.heading}>Business Profile</Text>
+            <Text style={styles.subtitle}>Branding for PDF reports</Text>
+          </View>
+        </View>
+
+        <Text style={styles.message}>
+          Your company details will appear on every generated report. Setup
+          arrives in a later step.
         </Text>
 
-        <FormField
-          label="Company Name"
-          value={profile.companyName}
-          onChangeText={value => updateField('companyName', value)}
-          placeholder="Your business name"
-        />
-        <FormField
-          label="Phone"
-          value={profile.phone}
-          onChangeText={value => updateField('phone', value)}
-          placeholder="+1 555 000 0000"
-          keyboardType="phone-pad"
-        />
-        <FormField
-          label="Email"
-          value={profile.email}
-          onChangeText={value => updateField('email', value)}
-          placeholder="contact@company.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <FormField
-          label="Website"
-          value={profile.website}
-          onChangeText={value => updateField('website', value)}
-          placeholder="https://company.com"
-          autoCapitalize="none"
-        />
-        <FormField
-          label="Business Address"
-          value={profile.address}
-          onChangeText={value => updateField('address', value)}
-          placeholder="Company address"
-          multiline
-        />
-        <FormField
-          label="Default Technician Name"
-          value={profile.defaultTechnicianName}
-          onChangeText={value => updateField('defaultTechnicianName', value)}
-          placeholder="Pre-fills new reports"
-        />
-
-        <Button
-          label={saving ? 'Saving...' : 'Save Profile'}
-          disabled={saving}
-          onPress={handleSave}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <View style={styles.fieldList}>
+          {PROFILE_FIELDS.map((field, index) => (
+            <View key={field} style={styles.fieldRow}>
+              <View style={styles.fieldNumber}>
+                <Text style={styles.fieldNumberText}>{index + 1}</Text>
+              </View>
+              <Text style={styles.fieldLabel}>{field}</Text>
+            </View>
+          ))}
+        </View>
+      </Card>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
+    gap: spacing.lg,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  headerText: {
     flex: 1,
-    backgroundColor: colors.background,
+    gap: 2,
   },
-  content: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
+  subtitle: {
+    ...typography.caption,
+    color: colors.textMuted,
   },
-  hint: {
-    fontSize: 14,
+  message: {
+    ...typography.body,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    lineHeight: 20,
+  },
+  fieldList: {
+    gap: spacing.sm,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  fieldNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.full,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldNumberText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  fieldLabel: {
+    ...typography.body,
+    flex: 1,
+    color: colors.text,
   },
 });

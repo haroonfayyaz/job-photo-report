@@ -7,7 +7,9 @@ export function toISOString(date: Date = new Date()): string {
 }
 
 export function formatDisplayDate(isoDate: string): string {
-  const date = new Date(isoDate.includes('T') ? isoDate : `${isoDate}T00:00:00`);
+  const date = new Date(
+    isoDate.includes('T') ? isoDate : `${isoDate}T00:00:00`,
+  );
   if (Number.isNaN(date.getTime())) {
     return isoDate;
   }
