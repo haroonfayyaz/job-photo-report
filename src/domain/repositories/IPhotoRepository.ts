@@ -11,4 +11,5 @@ export interface IPhotoRepository {
   listBySectionId(sectionId: string): ReportPhoto[];
   update(id: string, input: UpdatePhotoInput): ReportPhoto | null;
   delete(id: string): boolean;
+  reorder(reportId: string, orderedPhotoIds: string[]): ReportPhoto[];
 }
