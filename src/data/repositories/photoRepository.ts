@@ -122,6 +122,10 @@ export function updatePhoto(
     ...existing,
     sectionId:
       input.sectionId !== undefined ? input.sectionId : existing.sectionId,
+    thumbnailPath:
+      input.thumbnailPath !== undefined
+        ? input.thumbnailPath
+        : existing.thumbnailPath,
     caption: input.caption?.trim() ?? existing.caption,
     category: input.category ?? existing.category,
     sortOrder: input.sortOrder ?? existing.sortOrder,
@@ -131,6 +135,7 @@ export function updatePhoto(
   connection.execute(
     `UPDATE report_photos SET
       section_id = ?,
+      thumbnail_path = ?,
       caption = ?,
       category = ?,
       sort_order = ?,
@@ -138,6 +143,7 @@ export function updatePhoto(
     WHERE id = ?;`,
     [
       updated.sectionId,
+      updated.thumbnailPath,
       updated.caption,
       updated.category,
       updated.sortOrder,

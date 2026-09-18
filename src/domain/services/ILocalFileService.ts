@@ -5,14 +5,15 @@ export interface SaveFileResult {
 export interface ILocalFileService {
   ensureAppDirectories(): Promise<void>;
   ensureReportDirectories(reportId: string): Promise<void>;
+  assertAvailableStorage(minBytes: number): Promise<void>;
   savePhoto(
     reportId: string,
     sourceUri: string,
     fileName: string,
   ): Promise<SaveFileResult>;
-  saveThumbnail(
+  generateThumbnail(
     reportId: string,
-    sourceUri: string,
+    sourceImagePath: string,
     fileName: string,
   ): Promise<SaveFileResult>;
   saveSignature(
@@ -24,4 +25,6 @@ export interface ILocalFileService {
   deleteFile(path: string): Promise<void>;
   deleteReportMedia(reportId: string): Promise<void>;
   fileExists(path: string): Promise<boolean>;
+  listTempFiles(): Promise<string[]>;
+  deleteTempFile(fileName: string): Promise<void>;
 }

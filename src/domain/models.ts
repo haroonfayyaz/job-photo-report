@@ -120,6 +120,7 @@ export interface CreatePhotoInput {
 
 export interface UpdatePhotoInput {
   sectionId?: string | null;
+  thumbnailPath?: string | null;
   caption?: string;
   category?: PhotoCategory;
   sortOrder?: number;

@@ -6,10 +6,10 @@ import {
   launchImageLibrary,
 } from 'react-native-image-picker';
 
-import { localFileService } from '../data/services/localFileService';
-import { createPhoto } from '../data/repositories/photoRepository';
+import { isMediaStorageError } from '../domain/errors/mediaStorageError';
 import { toUTCString } from '../domain/dates';
 import type { ReportPhoto } from '../domain/models';
+import { saveImportedPhoto } from './mediaStorageService';
 import { getFileExtension } from '../utils/fileUri';
 import { generateId } from '../utils/id';
 
@@ -44,6 +44,14 @@ function showPickerError(message?: string): void {
   );
 }
 
+function showStorageError(error: unknown): void {
+  const message =
+    isMediaStorageError(error)
+      ? error.message
+      : 'Could not save the selected photo.';
+  Alert.alert('Could not save photo', message);
+}
+
 function handlePickerFailure(
   response: ImagePickerResponse,
   source: PickerSource,
@@ -64,8 +72,14 @@ function handlePickerFailure(
 }
 
 function assetCapturedAt(asset: Asset): string {
-  if (asset.timestamp) {
-    return new Date(asset.timestamp).toISOString();
+  if (asset.timestamp != null) {
+    const numeric = Number(asset.timestamp);
+    const date = Number.isFinite(numeric)
+      ? new Date(numeric)
+      : new Date(asset.timestamp);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
   }
   return toUTCString();
 }
@@ -80,31 +94,12 @@ async function persistAsset(
 
   const photoId = generateId();
   const extension = getFileExtension(asset.uri, asset.fileName, asset.type);
-  const originalFileName = `${photoId}-original${extension}`;
 
-  const saved = await localFileService.savePhoto(
+  return saveImportedPhoto({
     reportId,
-    asset.uri,
-    originalFileName,
-  );
-
-  let thumbnailPath: string | null = null;
-  try {
-    const thumbnail = await localFileService.saveThumbnail(
-      reportId,
-      asset.uri,
-      `${photoId}-thumb${extension}`,
-    );
-    thumbnailPath = thumbnail.path;
-  } catch (error) {
-    console.warn('Thumbnail copy failed; grid will use original path.', error);
-  }
-
-  return createPhoto({
-    id: photoId,
-    reportId,
-    originalPath: saved.path,
-    thumbnailPath,
+    photoId,
+    sourceUri: asset.uri,
+    extension,
     capturedAt: assetCapturedAt(asset),
   });
 }
@@ -137,8 +132,13 @@ export async function capturePhotoForReport(
     return { imported: [], cancelled: false };
   }
 
-  const photo = await persistAsset(reportId, asset);
-  return { imported: [photo], cancelled: false };
+  try {
+    const photo = await persistAsset(reportId, asset);
+    return { imported: [photo], cancelled: false };
+  } catch (error) {
+    showStorageError(error);
+    return { imported: [], cancelled: false };
+  }
 }
 
 export async function importPhotosFromGallery(
@@ -166,7 +166,11 @@ export async function importPhotosFromGallery(
 
   const imported: ReportPhoto[] = [];
   for (const asset of assets) {
-    imported.push(await persistAsset(reportId, asset));
+    try {
+      imported.push(await persistAsset(reportId, asset));
+    } catch (error) {
+      showStorageError(error);
+    }
   }
 
   return { imported, cancelled: false };
