@@ -107,6 +107,7 @@ export interface UpdateSectionInput {
 }
 
 export interface CreatePhotoInput {
+  id?: string;
   reportId: string;
   sectionId?: string | null;
   originalPath: string;

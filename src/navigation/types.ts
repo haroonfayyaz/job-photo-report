@@ -3,5 +3,6 @@ export type RootStackParamList = {
   CreateReport: undefined;
   ReportDetail: { reportId: string };
   EditReport: { reportId: string };
+  PhotoDetail: { photoId: string; reportId: string };
   Settings: undefined;
 };

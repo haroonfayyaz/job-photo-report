@@ -30,7 +30,7 @@ export function createPhoto(
   const connection = getDb(db);
   const now = toUTCString();
   const photo: ReportPhoto = {
-    id: generateId(),
+    id: input.id ?? generateId(),
     reportId: input.reportId,
     sectionId: input.sectionId ?? null,
     originalPath: input.originalPath,
