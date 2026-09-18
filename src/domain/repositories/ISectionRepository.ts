@@ -10,4 +10,5 @@ export interface ISectionRepository {
   listByReportId(reportId: string): ReportSection[];
   update(id: string, input: UpdateSectionInput): ReportSection | null;
   delete(id: string): boolean;
+  reorder(reportId: string, orderedSectionIds: string[]): ReportSection[];
 }

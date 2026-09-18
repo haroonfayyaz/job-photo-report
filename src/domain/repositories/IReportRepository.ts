@@ -10,4 +10,6 @@ export interface IReportRepository {
   list(): Report[];
   update(id: string, input: UpdateReportInput): Report | null;
   delete(id: string): boolean;
+  search(query: string): Report[];
+  duplicate(id: string): Report | null;
 }

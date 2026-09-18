@@ -2583,7 +2583,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*":
+"@types/node@npm:*, @types/node@npm:^26.6.1":
   version: 26.6.1
   resolution: "@types/node@npm:26.6.1"
   dependencies:
@@ -2802,6 +2802,7 @@ __metadata:
     "@react-navigation/native": ^7.4.1
     "@react-navigation/native-stack": ^7.19.2
     "@types/jest": ^29.5.14
+    "@types/node": ^26.6.1
     "@types/react": ^19.2.0
     "@types/react-test-renderer": ^19.1.0
     eslint: ^8.57.1
@@ -2813,6 +2814,7 @@ __metadata:
     react-native-safe-area-context: ^5.10.0
     react-native-screens: ^4.28.0
     react-test-renderer: 19.2.3
+    sql.js: ^1.14.2
     typescript: ^6.0.3
   languageName: unknown
   linkType: soft
@@ -8071,6 +8073,13 @@ __metadata:
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
   checksum: 19d79aec211f09b99ec3099b5b2ae2f6e9cdefe50bc91ac4c69144b6d3928a640bb6ae5b3def70c2e85a2c3d9f5ec2719921e3a59d3ca3ef4b2fd1a4656a0df3
+  languageName: node
+  linkType: hard
+
+"sql.js@npm:^1.14.2":
+  version: 1.14.2
+  resolution: "sql.js@npm:1.14.2"
+  checksum: 8dc9d8f583318d4a4226b4368844782398adf69cb2991d9907c74e5df94b85da55c76c40fa8d9c737aff8f03f0e2973b8d8876a378e40108d15a6edc93a3150d
   languageName: node
   linkType: hard
 
