@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { CreateReportScreen } from '../screens/CreateReportScreen';
 import { EditReportScreen } from '../screens/EditReportScreen';
+import { PhotoDetailScreen } from '../screens/PhotoDetailScreen';
 import { ReportDetailScreen } from '../screens/ReportDetailScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -62,6 +63,11 @@ export function RootNavigator() {
           name="EditReport"
           component={EditReportScreen}
           options={{ title: 'Edit Report' }}
+        />
+        <Stack.Screen
+          name="PhotoDetail"
+          component={PhotoDetailScreen}
+          options={{ title: 'Photo' }}
         />
         <Stack.Screen
           name="Settings"

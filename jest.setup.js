@@ -6,3 +6,16 @@ jest.mock('@op-engineering/op-sqlite', () => ({
     close: jest.fn(),
   })),
 }));
+
+jest.mock('react-native-fs', () => ({
+  DocumentDirectoryPath: '/mock/documents',
+  exists: jest.fn(async () => false),
+  mkdir: jest.fn(async () => undefined),
+  copyFile: jest.fn(async () => undefined),
+  unlink: jest.fn(async () => undefined),
+}));
+
+jest.mock('react-native-image-picker', () => ({
+  launchCamera: jest.fn(),
+  launchImageLibrary: jest.fn(),
+}));

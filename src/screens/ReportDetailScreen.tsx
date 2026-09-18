@@ -13,13 +13,18 @@ import {
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
+import { PhotoGrid } from '../components/PhotoGrid';
 import { STATUS_LABELS } from '../constants/statusLabels';
 import { TEMPLATE_LABELS } from '../constants/templateLabels';
 import { listPhotosByReportId } from '../data/repositories/photoRepository';
 import { getReportById } from '../data/repositories/reportRepository';
 import { listSectionsByReportId } from '../data/repositories/sectionRepository';
-import type { Report } from '../domain/models';
+import type { Report, ReportPhoto } from '../domain/models';
 import type { RootStackParamList } from '../navigation/types';
+import {
+  capturePhotoForReport,
+  importPhotosFromGallery,
+} from '../services/photoImportService';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
@@ -30,9 +35,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ReportDetail'>;
 export function ReportDetailScreen({ navigation, route }: Props) {
   const { reportId } = route.params;
   const [report, setReport] = useState<Report | null>(null);
-  const [photoCount, setPhotoCount] = useState(0);
+  const [photos, setPhotos] = useState<ReportPhoto[]>([]);
   const [sectionCount, setSectionCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
 
   const loadReport = useCallback(() => {
     try {
@@ -45,7 +51,7 @@ export function ReportDetailScreen({ navigation, route }: Props) {
       }
 
       setReport(data);
-      setPhotoCount(listPhotosByReportId(reportId).length);
+      setPhotos(listPhotosByReportId(reportId));
       setSectionCount(listSectionsByReportId(reportId).length);
       navigation.setOptions({ title: data.reportNumber });
     } catch (loadError) {
@@ -62,6 +68,33 @@ export function ReportDetailScreen({ navigation, route }: Props) {
       loadReport();
     }, [loadReport]),
   );
+
+  const handleImport = async (source: 'camera' | 'gallery') => {
+    if (!report || importing) {
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const result =
+        source === 'camera'
+          ? await capturePhotoForReport(report.id)
+          : await importPhotosFromGallery(report.id);
+
+      if (result.imported.length > 0) {
+        setPhotos(current => [...current, ...result.imported]);
+      }
+    } catch (importError) {
+      console.error('Photo import failed:', importError);
+      const message =
+        importError instanceof Error
+          ? importError.message
+          : 'Could not save the selected photo.';
+      Alert.alert('Could not add photo', message);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -115,21 +148,50 @@ export function ReportDetailScreen({ navigation, route }: Props) {
         ) : null}
       </Card>
 
-      <Card style={styles.placeholderCard}>
-        <View style={styles.placeholderHeader}>
+      <Card style={styles.photosCard}>
+        <View style={styles.photosHeader}>
           <IconBadge symbol="📷" variant="accent" size="md" />
-          <View style={styles.placeholderHeaderText}>
-            <Text style={typography.heading}>Sections & photos</Text>
-            <Text style={styles.placeholderSubtitle}>
-              {photoCount} photo{photoCount === 1 ? '' : 's'} · {sectionCount}{' '}
-              section{sectionCount === 1 ? '' : 's'}
+          <View style={styles.photosHeaderText}>
+            <Text style={typography.heading}>Photos</Text>
+            <Text style={styles.photosSubtitle}>
+              {photos.length} photo{photos.length === 1 ? '' : 's'} ·{' '}
+              {sectionCount} section{sectionCount === 1 ? '' : 's'}
             </Text>
           </View>
         </View>
-        <Text style={styles.placeholderMessage}>
-          Photo capture, sections, and captions will be added in upcoming steps.
-        </Text>
-        <Button label="Add Photos" variant="secondary" disabled />
+
+        {photos.length > 0 ? (
+          <PhotoGrid
+            photos={photos}
+            onPhotoPress={photo =>
+              navigation.navigate('PhotoDetail', {
+                photoId: photo.id,
+                reportId: report.id,
+              })
+            }
+          />
+        ) : (
+          <Text style={styles.emptyPhotos}>
+            Capture or import photos for this job. Images are saved locally on
+            your device.
+          </Text>
+        )}
+
+        <View style={styles.photoActions}>
+          <Button
+            label={importing ? 'Adding...' : 'Camera'}
+            onPress={() => handleImport('camera')}
+            disabled={importing}
+            style={styles.photoActionButton}
+          />
+          <Button
+            label={importing ? 'Adding...' : 'Gallery'}
+            variant="secondary"
+            onPress={() => handleImport('gallery')}
+            disabled={importing}
+            style={styles.photoActionButton}
+          />
+        </View>
       </Card>
 
       <View style={styles.actions}>
@@ -210,25 +272,32 @@ const styles = StyleSheet.create({
   detailValue: {
     ...typography.body,
   },
-  placeholderCard: {
+  photosCard: {
     gap: spacing.md,
   },
-  placeholderHeader: {
+  photosHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  placeholderHeaderText: {
+  photosHeaderText: {
     flex: 1,
     gap: 2,
   },
-  placeholderSubtitle: {
+  photosSubtitle: {
     ...typography.caption,
     color: colors.textSecondary,
   },
-  placeholderMessage: {
+  emptyPhotos: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  photoActionButton: {
+    flex: 1,
   },
   actions: {
     gap: spacing.sm,

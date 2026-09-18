@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { initializeDatabase } from '../data';
+import { localFileService } from '../data/services/localFileService';
 import { RootNavigator } from '../navigation/RootNavigator';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -12,13 +13,18 @@ export function AppBootstrap() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      initializeDatabase();
-      setReady(true);
-    } catch (bootstrapError) {
-      console.error('Database initialization failed:', bootstrapError);
-      setError('Failed to initialize local storage. Please restart the app.');
-    }
+    const bootstrap = async () => {
+      try {
+        initializeDatabase();
+        await localFileService.ensureAppDirectories();
+        setReady(true);
+      } catch (bootstrapError) {
+        console.error('Database initialization failed:', bootstrapError);
+        setError('Failed to initialize local storage. Please restart the app.');
+      }
+    };
+
+    bootstrap().catch(() => undefined);
   }, []);
 
   if (error) {
