@@ -65,6 +65,11 @@ export interface BusinessProfile {
   defaultTechnicianName: string;
 }
 
+export interface ReportSummary extends Report {
+  photoCount: number;
+  sectionCount: number;
+}
+
 export interface CreateReportInput {
   templateKey?: TemplateKey;
   title?: string;

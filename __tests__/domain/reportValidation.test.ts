@@ -27,7 +27,7 @@ describe('report validation', () => {
   });
 
   it('validates report number field', () => {
-    expect(validateReportNumberField('RPT-20250918-001').valid).toBe(true);
+    expect(validateReportNumberField('RPT-000001').valid).toBe(true);
     expect(validateReportNumberField('bad').valid).toBe(false);
   });
 

@@ -3,7 +3,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { Platform } from 'react-native';
 
-import { NewReportScreen } from '../screens/NewReportScreen';
+import { CreateReportScreen } from '../screens/CreateReportScreen';
+import { EditReportScreen } from '../screens/EditReportScreen';
+import { ReportDetailScreen } from '../screens/ReportDetailScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { colors } from '../theme/colors';
@@ -47,9 +49,19 @@ export function RootNavigator() {
           options={{ title: 'Reports' }}
         />
         <Stack.Screen
-          name="NewReport"
-          component={NewReportScreen}
+          name="CreateReport"
+          component={CreateReportScreen}
           options={{ title: 'New Report' }}
+        />
+        <Stack.Screen
+          name="ReportDetail"
+          component={ReportDetailScreen}
+          options={{ title: 'Report' }}
+        />
+        <Stack.Screen
+          name="EditReport"
+          component={EditReportScreen}
+          options={{ title: 'Edit Report' }}
         />
         <Stack.Screen
           name="Settings"

@@ -1,14 +1,22 @@
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
 import { IconBadge } from '../components/IconBadge';
+import { ReportListItem } from '../components/ReportListItem';
 import { ScreenContainer } from '../components/ScreenContainer';
-import { env } from '../config/env';
+import { listReportSummaries } from '../data/repositories/reportRepository';
+import type { ReportSummary } from '../domain/models';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { radius } from '../theme/radius';
@@ -18,129 +26,174 @@ import { typography } from '../theme/typography';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Reports'>;
 
-function ReportsHeaderRight() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      onPress={() => navigation.navigate('Settings')}
-      style={styles.headerButton}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-      <Text style={styles.headerButtonText}>Settings</Text>
-    </TouchableOpacity>
-  );
-}
-
 export function ReportsScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const [reports, setReports] = useState<ReportSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadReports = useCallback(() => {
+    try {
+      setError(null);
+      setReports(listReportSummaries());
+    } catch (loadError) {
+      console.error('Failed to load reports:', loadError);
+      setError('Could not load reports. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      loadReports();
+    }, [loadReports]),
+  );
+
   React.useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: ReportsHeaderRight,
+      headerRight: () => (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('Settings')}
+          style={styles.headerButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.headerButtonText}>Settings</Text>
+        </TouchableOpacity>
+      ),
     });
   }, [navigation]);
 
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <ScreenContainer style={styles.centeredContent}>
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <Button label="Retry" onPress={loadReports} />
+      </ScreenContainer>
+    );
+  }
+
   return (
-    <ScreenContainer style={styles.container}>
-      <View style={styles.heroCard}>
-        <View style={styles.heroAccent} />
-        <View style={styles.heroContent}>
-          <Text style={styles.heroLabel}>Field reports</Text>
-          <Text style={styles.heroTitle}>{env.appName}</Text>
-          <Text style={styles.heroSubtitle}>
-            Capture, organize, and share job photos — fully offline.
-          </Text>
-        </View>
-      </View>
+    <View style={styles.screen}>
+      <FlatList
+        contentContainerStyle={[
+          styles.listContent,
+          reports.length === 0 && styles.emptyList,
+          { paddingBottom: insets.bottom + 88 },
+        ]}
+        data={reports}
+        keyExtractor={item => item.id}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <IconBadge symbol="📋" variant="primary" />
+            <Text style={typography.heading}>Create your first photo report</Text>
+            <Text style={styles.emptyMessage}>
+              Build a report in about a minute. Everything stays on your device —
+              no internet needed.
+            </Text>
+            <Button
+              label="New Report"
+              onPress={() => navigation.navigate('CreateReport')}
+              style={styles.emptyButton}
+            />
+          </View>
+        }
+        renderItem={({ item }) => (
+          <ReportListItem
+            report={item}
+            onPress={() =>
+              navigation.navigate('ReportDetail', { reportId: item.id })
+            }
+          />
+        )}
+        refreshing={loading}
+        onRefresh={loadReports}
+      />
 
-      <Card style={styles.emptyCard}>
-        <View style={styles.emptyContent}>
-          <IconBadge symbol="📋" variant="primary" />
-          <Text style={typography.heading}>No reports yet</Text>
-          <Text style={styles.message}>
-            Start your first report in about a minute. Add photos, sections, and
-            export a PDF when those features land.
-          </Text>
-        </View>
-        <Button
-          label="Create New Report"
-          onPress={() => navigation.navigate('NewReport')}
-        />
-      </Card>
-
-      <View style={styles.tipRow}>
-        <View style={styles.tipDot} />
-        <Text style={styles.tipText}>
-          Works without internet — everything stays on your device.
-        </Text>
-      </View>
-    </ScreenContainer>
+      {reports.length > 0 ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('CreateReport')}
+          style={[styles.fab, { bottom: insets.bottom + spacing.md }]}>
+          <Text style={styles.fabText}>+ New Report</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.lg,
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  heroCard: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadow('lg'),
-  },
-  heroAccent: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 140,
-    height: 140,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  heroContent: {
-    padding: spacing.lg,
-    gap: spacing.xs,
-  },
-  heroLabel: {
-    ...typography.label,
-    color: 'rgba(255, 255, 255, 0.75)',
-  },
-  heroTitle: {
-    ...typography.display,
-    color: colors.onPrimary,
-  },
-  heroSubtitle: {
-    ...typography.caption,
-    color: 'rgba(255, 255, 255, 0.85)',
-    marginTop: spacing.xs,
-  },
-  emptyCard: {
-    gap: spacing.lg,
-  },
-  emptyContent: {
+  centered: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
     gap: spacing.md,
   },
-  message: {
+  listContent: {
+    padding: spacing.md,
+  },
+  emptyList: {
+    flexGrow: 1,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  emptyMessage: {
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  tipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
+  emptyButton: {
+    minWidth: 200,
+    marginTop: spacing.sm,
   },
-  tipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radius.full,
+  errorTitle: {
+    ...typography.heading,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.md,
     backgroundColor: colors.accent,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: minTouchTarget,
+    justifyContent: 'center',
+    ...shadow('md'),
   },
-  tipText: {
-    ...typography.caption,
-    flex: 1,
-    color: colors.textMuted,
+  fabText: {
+    ...typography.button,
+    color: colors.onPrimary,
   },
   headerButton: {
     marginRight: spacing.sm,
