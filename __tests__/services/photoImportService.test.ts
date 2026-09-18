@@ -1,3 +1,4 @@
+import ImageResizer from '@bam.tech/react-native-image-resizer';
 import {
   launchCamera,
   launchImageLibrary,
@@ -20,11 +21,16 @@ const mockedLaunchImageLibrary = launchImageLibrary as jest.MockedFunction<
 >;
 const mockedCopyFile = RNFS.copyFile as jest.MockedFunction<typeof RNFS.copyFile>;
 const mockedExists = RNFS.exists as jest.MockedFunction<typeof RNFS.exists>;
+const mockedCreateResizedImage =
+  ImageResizer.createResizedImage as jest.MockedFunction<
+    typeof ImageResizer.createResizedImage
+  >;
 
 describe('photoImportService', () => {
   beforeEach(async () => {
     await createTestDatabase();
     mockedCopyFile.mockClear();
+    mockedCreateResizedImage.mockClear();
     mockedExists.mockResolvedValue(false);
     mockedLaunchCamera.mockReset();
     mockedLaunchImageLibrary.mockReset();
@@ -69,9 +75,11 @@ describe('photoImportService', () => {
 
     expect(result.cancelled).toBe(false);
     expect(result.imported).toHaveLength(2);
-    expect(mockedCopyFile).toHaveBeenCalledTimes(4);
+    expect(mockedCopyFile).toHaveBeenCalledTimes(2);
+    expect(mockedCreateResizedImage).toHaveBeenCalledTimes(2);
     expect(listPhotosByReportId(report.id)).toHaveLength(2);
     expect(result.imported[0].originalPath).toContain('/images/');
+    expect(result.imported[0].thumbnailPath).toContain('/thumbnails/');
     expect(result.imported[0].originalPath).not.toContain('base64');
   });
 

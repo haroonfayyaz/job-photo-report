@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { initializeDatabase } from '../data';
 import { localFileService } from '../data/services/localFileService';
+import { runOrphanCleanup } from '../services/mediaCleanupService';
 import { RootNavigator } from '../navigation/RootNavigator';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -17,6 +18,7 @@ export function AppBootstrap() {
       try {
         initializeDatabase();
         await localFileService.ensureAppDirectories();
+        await runOrphanCleanup();
         setReady(true);
       } catch (bootstrapError) {
         console.error('Database initialization failed:', bootstrapError);

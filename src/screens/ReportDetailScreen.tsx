@@ -25,6 +25,7 @@ import {
   capturePhotoForReport,
   importPhotosFromGallery,
 } from '../services/photoImportService';
+import { ensureReportPhotoThumbnails } from '../services/mediaStorageService';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
@@ -38,7 +39,9 @@ export function ReportDetailScreen({ navigation, route }: Props) {
   const [photos, setPhotos] = useState<ReportPhoto[]>([]);
   const [sectionCount, setSectionCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [importing, setImporting] = useState(false);
+  const [importingSource, setImportingSource] = useState<
+    'camera' | 'gallery' | null
+  >(null);
 
   const loadReport = useCallback(() => {
     try {
@@ -51,9 +54,14 @@ export function ReportDetailScreen({ navigation, route }: Props) {
       }
 
       setReport(data);
-      setPhotos(listPhotosByReportId(reportId));
+      const loadedPhotos = listPhotosByReportId(reportId);
+      setPhotos(loadedPhotos);
       setSectionCount(listSectionsByReportId(reportId).length);
       navigation.setOptions({ title: data.reportNumber });
+
+      void ensureReportPhotoThumbnails(loadedPhotos).then(updatedPhotos => {
+        setPhotos(updatedPhotos);
+      });
     } catch (loadError) {
       console.error('Failed to load report:', loadError);
       Alert.alert('Error', 'Could not load this report.');
@@ -64,17 +72,23 @@ export function ReportDetailScreen({ navigation, route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
       loadReport();
     }, [loadReport]),
   );
 
+  const mergeThumbnailUpdates = useCallback((updated: ReportPhoto[]) => {
+    const byId = new Map(updated.map(photo => [photo.id, photo]));
+    setPhotos(current =>
+      current.map(photo => byId.get(photo.id) ?? photo),
+    );
+  }, []);
+
   const handleImport = async (source: 'camera' | 'gallery') => {
-    if (!report || importing) {
+    if (!report || importingSource) {
       return;
     }
 
-    setImporting(true);
+    setImportingSource(source);
     try {
       const result =
         source === 'camera'
@@ -83,6 +97,9 @@ export function ReportDetailScreen({ navigation, route }: Props) {
 
       if (result.imported.length > 0) {
         setPhotos(current => [...current, ...result.imported]);
+        void ensureReportPhotoThumbnails(result.imported).then(
+          mergeThumbnailUpdates,
+        );
       }
     } catch (importError) {
       console.error('Photo import failed:', importError);
@@ -92,7 +109,7 @@ export function ReportDetailScreen({ navigation, route }: Props) {
           : 'Could not save the selected photo.';
       Alert.alert('Could not add photo', message);
     } finally {
-      setImporting(false);
+      setImportingSource(null);
     }
   };
 
@@ -179,16 +196,16 @@ export function ReportDetailScreen({ navigation, route }: Props) {
 
         <View style={styles.photoActions}>
           <Button
-            label={importing ? 'Adding...' : 'Camera'}
+            label={importingSource === 'camera' ? 'Adding...' : 'Camera'}
             onPress={() => handleImport('camera')}
-            disabled={importing}
+            disabled={importingSource !== null}
             style={styles.photoActionButton}
           />
           <Button
-            label={importing ? 'Adding...' : 'Gallery'}
+            label={importingSource === 'gallery' ? 'Adding...' : 'Gallery'}
             variant="secondary"
             onPress={() => handleImport('gallery')}
-            disabled={importing}
+            disabled={importingSource !== null}
             style={styles.photoActionButton}
           />
         </View>
