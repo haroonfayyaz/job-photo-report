@@ -1,4 +1,5 @@
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
+import type {NativeStackNavigationOptions} from '@react-navigation/native-stack';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import React, {useCallback, useState} from 'react';
@@ -32,12 +33,17 @@ function SettingsHeaderButton({onPress}: {onPress: () => void}) {
   );
 }
 
-function HomeHeaderRight() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  return (
-    <SettingsHeaderButton onPress={() => navigation.navigate('Settings')} />
-  );
+export function homeScreenOptions({
+  navigation,
+}: {
+  navigation: NativeStackNavigationProp<RootStackParamList>;
+}): NativeStackNavigationOptions {
+  return {
+    title: 'Job Photo Reports',
+    headerRight: () => (
+      <SettingsHeaderButton onPress={() => navigation.navigate('Settings')} />
+    ),
+  };
 }
 
 export function HomeScreen({navigation}: Props) {
@@ -61,12 +67,6 @@ export function HomeScreen({navigation}: Props) {
       loadReports();
     }, [loadReports]),
   );
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: HomeHeaderRight,
-    });
-  }, [navigation]);
 
   if (loading) {
     return (
