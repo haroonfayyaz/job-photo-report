@@ -8,9 +8,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import {colors, spacing} from '../constants/theme';
+import { colors } from '../theme/colors';
+import { radius } from '../theme/radius';
+import { shadow } from '../theme/shadows';
+import { minTouchTarget, spacing } from '../theme/spacing';
+import { typography } from '../theme/typography';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
 interface ButtonProps extends PressableProps {
   label: string;
@@ -29,15 +33,21 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
-      style={({pressed}) => [
+      style={({ pressed }) => [
         styles.base,
         styles[variant],
+        variant === 'primary' && shadow('sm'),
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
         style,
       ]}
       {...props}>
-      <Text style={[styles.label, variant === 'secondary' && styles.secondaryLabel]}>
+      <Text
+        style={[
+          typography.button,
+          variant === 'secondary' && styles.secondaryLabel,
+          variant === 'ghost' && styles.ghostLabel,
+        ]}>
         {label}
       </Text>
     </Pressable>
@@ -46,7 +56,8 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 8,
+    minHeight: minTouchTarget,
+    borderRadius: radius.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
@@ -57,24 +68,23 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
   },
-  danger: {
-    backgroundColor: colors.danger,
+  ghost: {
+    backgroundColor: colors.primarySoft,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   pressed: {
-    opacity: 0.85,
-  },
-  label: {
-    color: colors.surface,
-    fontSize: 16,
-    fontWeight: '600',
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   secondaryLabel: {
     color: colors.text,
+  },
+  ghostLabel: {
+    color: colors.primary,
   },
 });
