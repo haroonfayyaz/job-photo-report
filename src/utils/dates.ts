@@ -1,10 +1,10 @@
-export function toISODate(date: Date = new Date()): string {
-  return date.toISOString().slice(0, 10);
-}
+import { toISODate, toUTCString } from '../domain/dates';
 
-export function toISOString(date: Date = new Date()): string {
-  return date.toISOString();
-}
+/** @see src/domain/dates.ts for storage format conventions */
+export { toISODate, toUTCString };
+
+/** Alias kept for callers expecting toISOString naming. */
+export const toISOString = toUTCString;
 
 export function formatDisplayDate(isoDate: string): string {
   const date = new Date(
