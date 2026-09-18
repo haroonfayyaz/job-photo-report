@@ -4,7 +4,7 @@ import React from 'react';
 
 import {colors} from '../constants/theme';
 import {CreateReportScreen} from '../screens/CreateReportScreen';
-import {HomeScreen} from '../screens/HomeScreen';
+import {HomeScreen, homeScreenOptions} from '../screens/HomeScreen';
 import {ReportDetailScreen} from '../screens/ReportDetailScreen';
 import {SettingsScreen} from '../screens/SettingsScreen';
 import type {RootStackParamList} from './types';
@@ -24,7 +24,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{title: 'Job Photo Reports'}}
+          options={homeScreenOptions}
         />
         <Stack.Screen
           name="CreateReport"
