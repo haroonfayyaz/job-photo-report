@@ -3,6 +3,7 @@ import {
   createPhoto,
   listPhotosByReportId,
   reorderPhotos,
+  updatePhoto,
 } from '../../src/data/repositories/photoRepository';
 import { createSection } from '../../src/data/repositories/sectionRepository';
 import {
@@ -41,5 +42,31 @@ describe('photoRepository', () => {
 
     expect(photos.map(p => p.caption)).toEqual(['A', 'B']);
     expect(photos.every(p => !p.originalPath.includes('base64'))).toBe(true);
+  });
+
+  it('updates caption, category, and section assignment', () => {
+    const report = createReport({ customerName: 'Photo Update' });
+    const section = createSection({ reportId: report.id, title: 'Kitchen' });
+    const photo = createPhoto({
+      reportId: report.id,
+      originalPath: '/files/photo.jpg',
+      caption: '',
+      category: 'UNCATEGORIZED',
+    });
+
+    const updated = updatePhoto(photo.id, {
+      caption: 'Leak under sink',
+      category: 'ISSUE',
+      sectionId: section.id,
+    });
+
+    expect(updated).toMatchObject({
+      caption: 'Leak under sink',
+      category: 'ISSUE',
+      sectionId: section.id,
+    });
+
+    const cleared = updatePhoto(photo.id, { sectionId: null });
+    expect(cleared?.sectionId).toBeNull();
   });
 });

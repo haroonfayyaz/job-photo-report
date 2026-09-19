@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,14 +12,15 @@ import {
 
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { GroupedPhotoOverview } from '../components/GroupedPhotoOverview';
 import { IconBadge } from '../components/IconBadge';
-import { PhotoGrid } from '../components/PhotoGrid';
+import { SectionManager } from '../components/SectionManager';
 import { STATUS_LABELS } from '../constants/statusLabels';
 import { TEMPLATE_LABELS } from '../constants/templateLabels';
 import { listPhotosByReportId } from '../data/repositories/photoRepository';
 import { getReportById } from '../data/repositories/reportRepository';
 import { listSectionsByReportId } from '../data/repositories/sectionRepository';
-import type { Report, ReportPhoto } from '../domain/models';
+import type { Report, ReportPhoto, ReportSection } from '../domain/models';
 import type { RootStackParamList } from '../navigation/types';
 import {
   capturePhotoForReport,
@@ -30,6 +31,11 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import { formatDisplayDate, formatRelativeTime } from '../utils/dates';
+import {
+  flattenPhotoIds,
+  getUncategorizedPhotoIds,
+  groupPhotosBySection,
+} from '../utils/groupPhotosBySection';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReportDetail'>;
 
@@ -37,11 +43,16 @@ export function ReportDetailScreen({ navigation, route }: Props) {
   const { reportId } = route.params;
   const [report, setReport] = useState<Report | null>(null);
   const [photos, setPhotos] = useState<ReportPhoto[]>([]);
-  const [sectionCount, setSectionCount] = useState(0);
+  const [sections, setSections] = useState<ReportSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [importingSource, setImportingSource] = useState<
     'camera' | 'gallery' | null
   >(null);
+
+  const photoGroups = useMemo(
+    () => groupPhotosBySection(sections, photos),
+    [photos, sections],
+  );
 
   const loadReport = useCallback(() => {
     try {
@@ -56,7 +67,7 @@ export function ReportDetailScreen({ navigation, route }: Props) {
       setReport(data);
       const loadedPhotos = listPhotosByReportId(reportId);
       setPhotos(loadedPhotos);
-      setSectionCount(listSectionsByReportId(reportId).length);
+      setSections(listSectionsByReportId(reportId));
       navigation.setOptions({ title: data.reportNumber });
 
       void ensureReportPhotoThumbnails(loadedPhotos).then(updatedPhotos => {
@@ -83,6 +94,38 @@ export function ReportDetailScreen({ navigation, route }: Props) {
     );
   }, []);
 
+  const openPhotoEditor = useCallback(
+    (photo: ReportPhoto, options?: { fastMode?: boolean; photoIds?: string[] }) => {
+      navigation.navigate('PhotoDetail', {
+        photoId: photo.id,
+        reportId,
+        photoIds: options?.photoIds ?? flattenPhotoIds(photoGroups),
+        fastMode: options?.fastMode ?? false,
+      });
+    },
+    [navigation, photoGroups, reportId],
+  );
+
+  const maybeStartFastCategorize = useCallback(
+    (imported: ReportPhoto[]) => {
+      const uncategorizedIds = getUncategorizedPhotoIds(imported);
+      if (uncategorizedIds.length === 0) {
+        return;
+      }
+
+      const firstPhoto = imported.find(photo => photo.id === uncategorizedIds[0]);
+      if (!firstPhoto) {
+        return;
+      }
+
+      openPhotoEditor(firstPhoto, {
+        fastMode: true,
+        photoIds: uncategorizedIds,
+      });
+    },
+    [openPhotoEditor],
+  );
+
   const handleImport = async (source: 'camera' | 'gallery') => {
     if (!report || importingSource) {
       return;
@@ -97,9 +140,10 @@ export function ReportDetailScreen({ navigation, route }: Props) {
 
       if (result.imported.length > 0) {
         setPhotos(current => [...current, ...result.imported]);
-        void ensureReportPhotoThumbnails(result.imported).then(
-          mergeThumbnailUpdates,
-        );
+        void ensureReportPhotoThumbnails(result.imported).then(updated => {
+          mergeThumbnailUpdates(updated);
+          maybeStartFastCategorize(updated);
+        });
       }
     } catch (importError) {
       console.error('Photo import failed:', importError);
@@ -131,6 +175,7 @@ export function ReportDetailScreen({ navigation, route }: Props) {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <Card style={styles.heroCard}>
         <Text style={typography.display}>{displayTitle}</Text>
@@ -165,27 +210,39 @@ export function ReportDetailScreen({ navigation, route }: Props) {
         ) : null}
       </Card>
 
+      <Card style={styles.sectionsCard}>
+        <View style={styles.sectionHeader}>
+          <IconBadge symbol="🗂️" variant="accent" size="md" />
+          <View style={styles.sectionHeaderText}>
+            <Text style={typography.heading}>Sections</Text>
+            <Text style={styles.sectionSubtitle}>
+              {sections.length} section{sections.length === 1 ? '' : 's'}
+            </Text>
+          </View>
+        </View>
+        <SectionManager
+          reportId={report.id}
+          sections={sections}
+          onSectionsChange={setSections}
+        />
+      </Card>
+
       <Card style={styles.photosCard}>
         <View style={styles.photosHeader}>
           <IconBadge symbol="📷" variant="accent" size="md" />
           <View style={styles.photosHeaderText}>
             <Text style={typography.heading}>Photos</Text>
             <Text style={styles.photosSubtitle}>
-              {photos.length} photo{photos.length === 1 ? '' : 's'} ·{' '}
-              {sectionCount} section{sectionCount === 1 ? '' : 's'}
+              {photos.length} photo{photos.length === 1 ? '' : 's'} · grouped
+              by section
             </Text>
           </View>
         </View>
 
         {photos.length > 0 ? (
-          <PhotoGrid
-            photos={photos}
-            onPhotoPress={photo =>
-              navigation.navigate('PhotoDetail', {
-                photoId: photo.id,
-                reportId: report.id,
-              })
-            }
+          <GroupedPhotoOverview
+            groups={photoGroups}
+            onPhotoPress={photo => openPhotoEditor(photo)}
           />
         ) : (
           <Text style={styles.emptyPhotos}>
@@ -288,6 +345,22 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     ...typography.body,
+  },
+  sectionsCard: {
+    gap: spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
+  sectionSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   photosCard: {
     gap: spacing.md,
