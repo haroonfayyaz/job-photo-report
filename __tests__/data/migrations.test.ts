@@ -117,4 +117,66 @@ describe('database migrations', () => {
     );
     expect(Number(version.rows[0]?.value)).toBe(getLatestSchemaVersion());
   });
+
+  it('migrates legacy report_sections columns to the current schema', async () => {
+    const db = await createRawTestDatabase();
+
+    db.execute(`CREATE TABLE app_metadata (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
+    );`);
+    db.execute(
+      `INSERT INTO app_metadata (key, value) VALUES (?, ?);`,
+      [METADATA_KEYS.schemaVersion, '2'],
+    );
+    db.execute(`CREATE TABLE reports (
+      id TEXT PRIMARY KEY NOT NULL,
+      report_number TEXT NOT NULL UNIQUE,
+      template_key TEXT NOT NULL DEFAULT 'general',
+      title TEXT NOT NULL DEFAULT '',
+      customer_name TEXT NOT NULL,
+      site_address TEXT NOT NULL DEFAULT '',
+      job_reference TEXT NOT NULL DEFAULT '',
+      technician_name TEXT NOT NULL DEFAULT '',
+      report_date TEXT NOT NULL,
+      general_notes TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );`);
+    db.execute(`CREATE TABLE report_sections (
+      id TEXT PRIMARY KEY NOT NULL,
+      report_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT 'Old notes'
+    );`);
+    db.execute(
+      `INSERT INTO report_sections (id, report_id, title, description)
+       VALUES (?, ?, ?, ?);`,
+      ['section-1', 'report-1', 'Kitchen', 'Under sink leak'],
+    );
+
+    runMigrations(db);
+
+    const columns = db.execute('PRAGMA table_info(report_sections);');
+    const names = columns.rows.map(row => String(row.name));
+    expect(names).toContain('created_at');
+    expect(names).toContain('updated_at');
+    expect(names).toContain('notes');
+    expect(names).toContain('sort_order');
+
+    const row = db.execute(
+      `SELECT notes, created_at, updated_at FROM report_sections WHERE id = ?;`,
+      ['section-1'],
+    );
+    expect(row.rows[0]?.notes).toBe('Under sink leak');
+    expect(String(row.rows[0]?.created_at)).not.toBe('');
+    expect(String(row.rows[0]?.updated_at)).not.toBe('');
+
+    const version = db.execute(
+      'SELECT value FROM app_metadata WHERE key = ?;',
+      [METADATA_KEYS.schemaVersion],
+    );
+    expect(Number(version.rows[0]?.value)).toBe(getLatestSchemaVersion());
+  });
 });

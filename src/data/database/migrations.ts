@@ -1,4 +1,5 @@
 import { migrateToV2 } from './migrations/v2';
+import { migrateToV3 } from './migrations/v3';
 import type { DatabaseConnection } from './types';
 import { METADATA_KEYS, SCHEMA_VERSION } from './schema';
 
@@ -86,6 +87,10 @@ const MIGRATIONS: Migration[] = [
     version: 2,
     statements: [],
   },
+  {
+    version: 3,
+    statements: [],
+  },
 ];
 
 function getStoredVersion(db: DatabaseConnection): number {
@@ -126,6 +131,10 @@ export function runMigrations(db: DatabaseConnection): void {
     db.transaction(() => {
       if (migration.version === 2) {
         migrateToV2(db);
+      }
+
+      if (migration.version === 3) {
+        migrateToV3(db);
       }
 
       for (const statement of migration.statements) {

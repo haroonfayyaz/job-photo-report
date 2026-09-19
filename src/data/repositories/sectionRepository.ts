@@ -123,12 +123,35 @@ export function updateSection(
   return updated;
 }
 
+export function countPhotosInSection(
+  sectionId: string,
+  db?: DatabaseConnection,
+): number {
+  const connection = getDb(db);
+  const result = connection.execute(
+    'SELECT COUNT(*) AS count FROM report_photos WHERE section_id = ?;',
+    [sectionId],
+  );
+  return Number(result.rows[0]?.count ?? 0);
+}
+
 export function deleteSection(id: string, db?: DatabaseConnection): boolean {
   const connection = getDb(db);
   const result = connection.execute('DELETE FROM report_sections WHERE id = ?;', [
     id,
   ]);
   return result.rowsAffected > 0;
+}
+
+export function deleteSectionIfEmpty(
+  id: string,
+  db?: DatabaseConnection,
+): boolean {
+  const connection = getDb(db);
+  if (countPhotosInSection(id, connection) > 0) {
+    return false;
+  }
+  return deleteSection(id, connection);
 }
 
 export function reorderSections(
